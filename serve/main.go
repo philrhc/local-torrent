@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"flag"
 	"io"
 	"log/slog"
 	"os"
@@ -38,7 +39,11 @@ func parsePort(c *torrent.Client) string {
 	return strings.Split(first, ":")[1]
 }
 
+var interfc = flag.String("interface", "", "interface used by Zyre")
+
+
 func main() {
+	flag.Parse()
 	tmpDir := common.SetupTmpFolder()
 	defer os.RemoveAll(tmpDir)
 	defer envpprof.Stop()
@@ -64,6 +69,7 @@ func main() {
 
 	node := zyre.NewZyre(ctx)
 	node.SetName(parsePort(c))
+	node.SetInterface(*interfc)
 	defer node.Stop()
 	err = node.Start()
 	assertNil(err)
