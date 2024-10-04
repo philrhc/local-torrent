@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/anacrolix/envpprof"
 )
@@ -20,6 +21,14 @@ func (IpPortAddr) Network() string {
 
 func (me IpPortAddr) String() string {
 	return net.JoinHostPort(me.IP.String(), strconv.FormatInt(int64(me.Port), 10))
+}
+
+func ParseIpAddress(ipAddress string) IpPortAddr {
+	split := strings.Split(ipAddress, ":")
+	ip := net.ParseIP(split[0])
+	port, err := strconv.Atoi(split[1])
+	assertNil(err)
+	return IpPortAddr{ip, port}
 }
 
 func SetupTmpFolder() string {

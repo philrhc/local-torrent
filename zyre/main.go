@@ -25,20 +25,15 @@ func chat(ctx context.Context, input <-chan string, name string) {
 	}
 	node.Join("CHAT")
 
-	go func() {
-		for each := range node.Events() {
-			fmt.Print(each.PeerAddr)
-		}
-	}()
-
 	for {
 		select {
 		case e := <-node.Events():
-			fmt.Printf("\r%s%s> ", string(e.Msg), name)
+			fmt.Printf("\r%s%s> ", string(e.Type), name)
 		case msg := <-input:
 			node.Shout("CHAT", []byte(msg))
 		}
 	}
+
 }
 
 func main() {
