@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/go-zeromq/zyre"
+	"github.com/philrhc/zyre"
 )
 
 func chat(ctx context.Context, input <-chan string, name string) {

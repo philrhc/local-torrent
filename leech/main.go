@@ -15,9 +15,8 @@ import (
 	"github.com/anacrolix/envpprof"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/storage"
-	"github.com/go-zeromq/zyre"
+	"github.com/philrhc/zyre"
 )
-
 
 func newClientConfig() *torrent.ClientConfig {
 	cfg := torrent.NewDefaultClientConfig()
@@ -35,7 +34,7 @@ var magnet = flag.String("magnet", "magnet:?xt=urn:btih:8b16054886998b3cb98a30e9
 
 func main() {
 	flag.Parse()
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -50,10 +49,9 @@ func main() {
 
 	slog.Info("Starting magnet download", slog.String("magnetLink", *magnet))
 	t, _ := c.AddMagnet(*magnet)
-	
+
 	node := zyre.NewZyre(ctx)
 	defer node.Stop()
-
 	err := node.Start()
 	assertNil(err)
 	slog.Info("Joining group", slog.String("groupId", "hello"), slog.String("nodeId", node.Name()))
@@ -61,15 +59,16 @@ func main() {
 
 	go func() {
 		for {
-			msg := <- node.Events()
+			msg := <-node.Events()
 			slog.Info("received", slog.Any("message", msg))
 			if msg.Type == "ENTER" && msg.PeerName != "" {
-				split := strings.Split(msg.PeerName, ":")
-				host := split[0] 
-				hostport, err := strconv.Atoi(split[1])
+				protocolRemoved := strings.TrimPrefix(msg.PeerAddr, "tcp://")
+				split := strings.Split(protocolRemoved, ":")
+				host := split[0]
+				hostport, err := strconv.Atoi(msg.PeerName)
 				assertNil(err)
 				peer := torrent.PeerInfo{
-					Addr:   common.IpPortAddr{IP: net.ParseIP(host), Port: hostport},
+					Addr: common.IpPortAddr{IP: net.ParseIP(host), Port: hostport},
 				}
 				slog.Info("Adding peer", slog.Any("ip", peer.Addr.String()))
 				t.AddPeers([]torrent.PeerInfo{peer})

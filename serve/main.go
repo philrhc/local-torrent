@@ -16,7 +16,7 @@ import (
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
-	"github.com/go-zeromq/zyre"
+	"github.com/philrhc/zyre"
 )
 
 func newClientConfig() *torrent.ClientConfig {
@@ -55,15 +55,15 @@ func main() {
 	defer c.Close()
 
 	_, err = c.AddTorrent(&mi)
-	magnet, err := mi.MagnetV2() 
+	magnet, err := mi.MagnetV2()
 	assertNil(err)
 	slog.Info("torrent magnet link", slog.Any("magnet", magnet.String()))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	node := zyre.NewZyre(ctx)
-	node.SetName("127.0.0.1:"+ parsePort(c))
+	node.SetName(parsePort(c))
 	defer node.Stop()
 	err = node.Start()
 	assertNil(err)
@@ -76,7 +76,7 @@ func main() {
 			slog.Info("received", slog.Any("message", msg))
 		}
 	}()
-	
+
 	//wait for SIGINT
 	sigint_channel := make(chan os.Signal, 1)
 	signal.Notify(sigint_channel, os.Interrupt)
@@ -84,7 +84,7 @@ func main() {
 		slog.Info("captured sigint", i)
 		break
 	}
-	
+
 	slog.Info("Server stopped")
 }
 
