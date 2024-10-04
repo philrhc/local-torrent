@@ -67,7 +67,10 @@ func main() {
 				split := strings.Split(protocolRemoved, ":")
 				host := split[0]
 				hostport, err := strconv.Atoi(msg.PeerName)
-				assertNil(err)
+				if err != nil {
+					slog.Info("could not parse port number from peer name", slog.String("name", msg.PeerName))
+					continue
+				}
 				peer := torrent.PeerInfo{
 					Addr: common.IpPortAddr{IP: net.ParseIP(host), Port: hostport},
 				}
