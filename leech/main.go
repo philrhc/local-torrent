@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"log/slog"
 	"net"
@@ -30,10 +29,8 @@ func newClientConfig() *torrent.ClientConfig {
 	return cfg
 }
 
-var magnet = flag.String("magnet", "magnet:?xt=urn:btih:8b16054886998b3cb98a30e9240b8d62dc3362e7&dn=file", "magnet link")
-
 func main() {
-	flag.Parse()
+	magnet := os.Args[1]
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -47,8 +44,8 @@ func main() {
 	c, _ := torrent.NewClient(clientConfig)
 	defer c.Close()
 
-	slog.Info("Starting magnet download", slog.String("magnetLink", *magnet))
-	t, _ := c.AddMagnet(*magnet)
+	slog.Info("Starting magnet download", slog.String("magnetLink", magnet))
+	t, _ := c.AddMagnet(magnet)
 
 	node := zyre.NewZyre(ctx)
 	defer node.Stop()
@@ -61,7 +58,7 @@ func main() {
 		for {
 			msg := <-node.Events()
 			slog.Info("received", slog.Any("message", msg))
-			if msg.Type == "ENTER" && msg.PeerName != "" {
+			if msg.Type == "JOIN" && msg.PeerName != "" {
 				protocolRemoved := strings.TrimPrefix(msg.PeerAddr, "tcp://")
 				split := strings.Split(protocolRemoved, ":")
 				host := split[0]
