@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ func newClientConfig() *torrent.ClientConfig {
 
 var interfc = flag.String("interface", "", "interface used by Zyre")
 var magnet = flag.String("magnet", "", "magnet link for download")
+var thenseed = flag.String("thenseed", "false", "seed torrent after downloading")
 
 func main() {
 	flag.Parse()
@@ -84,6 +86,21 @@ func main() {
 	t.DownloadAll()
 	c.WaitAll()
 	log.Print("torrent downloaded")
+
+	thenseedParsed, err := strconv.ParseBool(*thenseed)
+	assertNil(err)
+
+	if thenseedParsed {
+		//wait for SIGINT
+		sigint_channel := make(chan os.Signal, 1)
+		signal.Notify(sigint_channel, os.Interrupt)
+		for i := range sigint_channel {
+			slog.Info("captured sigint", i)
+			break
+		}
+
+		slog.Info("Server stopped")
+	}
 }
 
 func assertNil(x any) {
