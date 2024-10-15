@@ -34,6 +34,12 @@ var interfc = flag.String("interface", "", "interface used by Zyre")
 var magnet = flag.String("magnet", "", "magnet link for download")
 var thenseed = flag.String("thenseed", "false", "seed torrent after downloading")
 
+func parsePort(c *torrent.Client) string {
+	listenAddrs := c.ListenAddrs()
+	first := listenAddrs[0].String()
+	return strings.Split(first, ":")[1]
+}
+
 func main() {
 	flag.Parse()
 
@@ -53,6 +59,7 @@ func main() {
 	t, _ := c.AddMagnet(*magnet)
 
 	node := zyre.NewZyre(ctx)
+	node.SetName(parsePort(c))
 	node.SetInterface(*interfc)
 	defer node.Stop()
 	err := node.Start()
