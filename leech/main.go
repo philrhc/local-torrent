@@ -1,11 +1,9 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"log/slog"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -16,7 +14,6 @@ import (
 	"github.com/anacrolix/envpprof"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/storage"
-	"github.com/philrhc/zyre"
 )
 
 func newClientConfig() *torrent.ClientConfig {
@@ -44,9 +41,6 @@ func parsePort(c *torrent.Client) string {
 func main() {
 	flag.Parse()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	tmpDir := common.SetupTmpFolder()
 	defer envpprof.Stop()
 	defer os.RemoveAll(tmpDir)
@@ -59,34 +53,28 @@ func main() {
 	slog.Info("starting magnet download", slog.String("magnetLink", *magnet))
 	t, _ := c.AddMagnet(*magnet)
 
-	node := zyre.NewZyre(ctx)
-	node.SetName(parsePort(c))
-	node.SetInterface(*interfc)
-	defer node.Stop()
-	err := node.Start()
-	assertNil(err)
-	slog.Info("joining group", slog.String("groupId", "hello"), slog.String("nodeId", node.Name()))
-	node.Join("hello")
+	//indicate interest in a magnet
+	torrents := make(chan string)
+	peerFound := make(chan common.FoundPeer)
+	common.FindPeers(parsePort(c), *interfc, peerFound, torrents)
+	magnetToTorrent := make(map [string]*torrent.Torrent)
 
-	go func() {
+	magnetToTorrent[common.ParseMagnetLink(*magnet)] = t
+	torrents <- common.ParseMagnetLink(*magnet)
+	
+	go func () {
 		for {
-			msg := <-node.Events()
-			slog.Info("received", slog.Any("message", msg))
-			if msg.Type == "JOIN" && msg.PeerName != "" {
-				protocolRemoved := strings.TrimPrefix(msg.PeerAddr, "tcp://")
-				split := strings.Split(protocolRemoved, ":")
-				host := split[0]
-				hostport, err := strconv.Atoi(msg.PeerName)
-				if err != nil {
-					slog.Info("could not parse port number from peer name", slog.String("name", msg.PeerName))
+			found := <- peerFound
+			u := magnetToTorrent[found.Magnet]
+			if u == nil {
+				slog.Info("found peer but not interested in torrent", 
+					slog.String("magnet", found.Magnet))
 					continue
-				}
-				peer := torrent.PeerInfo{
-					Addr: common.IpPortAddr{IP: net.ParseIP(host), Port: hostport},
-				}
-				slog.Info("Adding peer", slog.Any("ip", peer.Addr.String()))
-				t.AddPeers([]torrent.PeerInfo{peer})
 			}
+			slog.Info("add peer", slog.Any("ip", found.Peer.Addr.String()), 
+				slog.Any("foundMagnet", (found.Magnet)), 
+				slog.Any("torrentMagnet", u.InfoHash().HexString()))
+			u.AddPeers([]torrent.PeerInfo{found.Peer})
 		}
 	}()
 
@@ -96,7 +84,7 @@ func main() {
 	log.Print("torrent downloaded")
 
 	thenseedParsed, err := strconv.ParseBool(*thenseed)
-	assertNil(err)
+	common.AssertNil(err)
 
 	if thenseedParsed {
 		//wait for SIGINT
@@ -108,11 +96,5 @@ func main() {
 		}
 
 		slog.Info("Server stopped")
-	}
-}
-
-func assertNil(x any) {
-	if x != nil {
-		panic(x)
 	}
 }
