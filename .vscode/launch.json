@@ -11,8 +11,10 @@
             "mode": "debug",
             "program": "leech",
             "args": [
-                "--magnet",
-                "magnet:?xt=urn:btih:5908d209b7ba42867643f026279fa1f5d08103de&dn=file"
+                "-interface",
+                "lo",
+                "-magnet",
+                "magnet:?xt=urn:btih:4d50e7878c0aea2b426812f1b1fe2b9f28cb950d&dn=file"
             ]
         },
         {
