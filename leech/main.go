@@ -23,6 +23,7 @@ func newClientConfig() *torrent.ClientConfig {
 	cfg := torrent.NewDefaultClientConfig()
 	cfg.ListenPort = 0
 	cfg.NoDHT = true
+	cfg.DisablePEX = true
 	cfg.NoDefaultPortForwarding = true
 	cfg.Seed = true
 	cfg.Debug = false
