@@ -60,7 +60,7 @@ func main() {
 	magnetToTorrent := make(map [string]*torrent.Torrent)
 
 	magnetToTorrent[common.ParseMagnetLink(*magnet)] = t
-	torrents <- *magnet
+	torrents <- common.ParseMagnetLink(*magnet)
 	
 	go func () {
 		for {

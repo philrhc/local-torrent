@@ -48,13 +48,12 @@ func FindPeers(name string, interfc string, peerFound chan FoundPeer, magnet cha
 					peer := torrent.PeerInfo{
 						Addr: IpPortAddr{IP: net.ParseIP(host), Port: hostport},
 					}
-					slog.Info("peer found", slog.Any("ip", peer.Addr.String()))
+					slog.Info("peer found", slog.Any("ip", peer.Addr.String()), slog.String("magnet", msg.Group))
 					peerFound <- FoundPeer{Magnet: msg.Group, Peer: peer}
 				}
-			case toJoin := <-magnet:
-				groupId := ParseMagnetLink(toJoin)
+			case groupId := <-magnet:
 				slog.Info("joining group", slog.String("groupId", groupId), slog.String("nodeId", node.Name()))
-				node.Join(toJoin)
+				node.Join(groupId)
 			}
 		}
 	}()
