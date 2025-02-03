@@ -1,9 +1,7 @@
 package main
 
 import (
-	"crypto/rand"
 	"flag"
-	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -39,15 +37,16 @@ func parsePort(c *torrent.Client) string {
 }
 
 var interfc = flag.String("interface", "", "interface used by Zyre")
+var filename = flag.String("filename", "randomfile", "filename")
 
 func main() {
 	flag.Parse()
-	tmpDir := common.SetupTmpFolder()
-	defer os.RemoveAll(tmpDir)
+	// tmpDir := common.SetupTmpFolder()
+	// defer os.RemoveAll(tmpDir)
 	defer envpprof.Stop()
 
-	sourceDir := filepath.Join(tmpDir, "source")
-	mi := createTorrent(sourceDir)
+	sourceDir := filepath.Join("./", "store")
+	mi := createTorrent(*filename, sourceDir)
 
 	clientConfig := newClientConfig()
 	clientConfig.DefaultStorage = storage.NewMMap(sourceDir)
@@ -62,7 +61,6 @@ func main() {
 	common.AssertNil(err)
 	slog.Info("torrent magnet link", slog.Any("magnet", magnet.String()))
 
-	//indicate interest in a magnet
 	torrents := make(chan string)
 	peerFound := make(chan common.FoundPeer)
 	common.FindPeers(parsePort(c), *interfc, peerFound, torrents)
@@ -98,13 +96,8 @@ func main() {
 	slog.Info("Server stopped")
 }
 
-func createTorrent(sourceDir string) metainfo.MetaInfo {
-	common.AssertNil(os.Mkdir(sourceDir, 0o700))
-	f, err := os.Create(filepath.Join(sourceDir, "file"))
-	common.AssertNil(err)
-	_, err = io.CopyN(f, rand.Reader, 1<<30)
-	common.AssertNil(err)
-	common.AssertNil(f.Close())
+func createTorrent(filename string, sourceDir string) metainfo.MetaInfo {
+	f, err := os.Open(filepath.Join(sourceDir, filename))
 	var info metainfo.Info
 	err = info.BuildFromFilePath(f.Name())
 	common.AssertNil(err)
