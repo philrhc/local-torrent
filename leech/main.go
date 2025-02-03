@@ -30,7 +30,7 @@ func newClientConfig() *torrent.ClientConfig {
 
 var interfc = flag.String("interface", "", "interface used by Zyre")
 var magnet = flag.String("magnet", "", "magnet link for download")
-var thenseed = flag.String("thenseed", "false", "seed torrent after downloading")
+var thenseed = flag.Bool("thenseed", false, "seed torrent after downloading")
 
 func parsePort(c *torrent.Client) string {
 	listenAddrs := c.ListenAddrs()
@@ -39,6 +39,7 @@ func parsePort(c *torrent.Client) string {
 }
 
 func main() {
+	slog.Info("started")
 	flag.Parse()
 
 	tmpDir := common.SetupTmpFolder()
@@ -83,10 +84,7 @@ func main() {
 	c.WaitAll()
 	log.Print("torrent downloaded")
 
-	thenseedParsed, err := strconv.ParseBool(*thenseed)
-	common.AssertNil(err)
-
-	if thenseedParsed {
+	if *thenseed {
 		//wait for SIGINT
 		sigint_channel := make(chan os.Signal, 1)
 		signal.Notify(sigint_channel, os.Interrupt)
