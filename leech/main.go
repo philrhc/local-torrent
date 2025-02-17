@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"bsc.es/colmena/local-torrent/common"
 	"github.com/anacrolix/envpprof"
@@ -80,6 +81,13 @@ func main() {
 
 	<-t.GotInfo()
 	t.DownloadAll()
+	go func ()  {
+		for {
+			c.WriteStatus(os.Stdout)
+			time.Sleep(30 * time.Second)
+		}
+
+	}()
 	c.WaitAll()
 	log.Print("torrent downloaded")
 
