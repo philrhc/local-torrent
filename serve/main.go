@@ -39,6 +39,7 @@ func parsePort(c *torrent.Client) string {
 }
 
 var interfc = flag.String("interface", "", "interface used by Zyre")
+var fileSize = flag.Int64("size", 500, "file size to seed")
 
 func main() {
 	flag.Parse()
@@ -47,7 +48,7 @@ func main() {
 	defer envpprof.Stop()
 
 	sourceDir := filepath.Join(tmpDir, "source")
-	mi := createTorrent(sourceDir)
+	mi := createTorrent(sourceDir, *fileSize)
 
 	clientConfig := newClientConfig()
 	clientConfig.DefaultStorage = storage.NewMMap(sourceDir)
@@ -57,7 +58,7 @@ func main() {
 	common.AssertNil(err)
 	defer c.Close()
 
-	t, err := c.AddTorrent(&mi)
+	t, _ := c.AddTorrent(&mi)
 	magnet, err := mi.MagnetV2()
 	common.AssertNil(err)
 	slog.Info("torrent magnet link", slog.Any("magnet", magnet.String()))
@@ -98,11 +99,11 @@ func main() {
 	slog.Info("Server stopped")
 }
 
-func createTorrent(sourceDir string) metainfo.MetaInfo {
+func createTorrent(sourceDir string, size int64) metainfo.MetaInfo {
 	common.AssertNil(os.Mkdir(sourceDir, 0o700))
 	f, err := os.Create(filepath.Join(sourceDir, "file"))
 	common.AssertNil(err)
-	_, err = io.CopyN(f, rand.Reader, 1<<30)
+	_, err = io.CopyN(f, rand.Reader, (size << 20))
 	common.AssertNil(err)
 	common.AssertNil(f.Close())
 	var info metainfo.Info

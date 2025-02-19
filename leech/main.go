@@ -23,7 +23,7 @@ func newClientConfig() *torrent.ClientConfig {
 	cfg.DisablePEX = true
 	cfg.NoDefaultPortForwarding = true
 	cfg.Seed = true
-	cfg.Debug = false
+	cfg.Debug = *debug
 	cfg.AlwaysWantConns = true
 	return cfg
 }
@@ -31,6 +31,7 @@ func newClientConfig() *torrent.ClientConfig {
 var interfc = flag.String("interface", "", "interface used by Zyre")
 var magnet = flag.String("magnet", "", "magnet link for download")
 var thenseed = flag.Bool("thenseed", false, "seed torrent after downloading")
+var debug = flag.Bool("debug", false, "debug logging")
 
 func parsePort(c *torrent.Client) string {
 	listenAddrs := c.ListenAddrs()
@@ -79,15 +80,18 @@ func main() {
 		}
 	}()
 
+	if *debug {
+		go func ()  {
+			for {
+				c.WriteStatus(os.Stdout)
+				time.Sleep(30 * time.Second)
+			}
+
+		}()
+	}
+
 	<-t.GotInfo()
 	t.DownloadAll()
-	go func ()  {
-		for {
-			c.WriteStatus(os.Stdout)
-			time.Sleep(30 * time.Second)
-		}
-
-	}()
 	c.WaitAll()
 	log.Print("torrent downloaded")
 
