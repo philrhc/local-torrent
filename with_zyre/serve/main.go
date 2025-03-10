@@ -24,7 +24,7 @@ func parsePort(c *torrent.Client) string {
 	return strings.Split(first, ":")[1]
 }
 
-var interfc = flag.String("interface", "", "network interface for peer discovery")
+var interfc = flag.String("interface", "", "interface used by Zyre")
 var fileSize = flag.Int64("size", 500, "file size to seed")
 
 func main() {
@@ -38,17 +38,41 @@ func main() {
 
 	clientConfig := common.NewClientConfig()
 	clientConfig.DefaultStorage = storage.NewMMap(sourceDir)
-	clientConfig.LocalServiceDiscovery = torrent.LocalServiceDiscoveryConfig{Enabled: true, Ifi: *interfc}
 	c, err := torrent.NewClient(clientConfig)
 	slog.Info("created bt client", slog.Any("listenAddr", c.ListenAddrs()))
 	slog.Info("listening", slog.String("port", parsePort(c)))
 	common.AssertNil(err)
 	defer c.Close()
 
-	c.AddTorrent(&mi)
+	t, _ := c.AddTorrent(&mi)
 	magnet, err := mi.MagnetV2()
 	common.AssertNil(err)
 	slog.Info("torrent magnet link", slog.Any("magnet", magnet.String()))
+
+	//indicate interest in a magnet
+	torrents := make(chan string)
+	peerFound := make(chan common.FoundPeer)
+	common.FindPeers(parsePort(c), *interfc, peerFound, torrents)
+	magnetToTorrent := make(map[string]*torrent.Torrent)
+
+	magnetToTorrent[common.ParseMagnetLink(magnet.String())] = t
+	torrents <- common.ParseMagnetLink(magnet.String())
+
+	go func() {
+		for {
+			found := <-peerFound
+			u := magnetToTorrent[found.Magnet]
+			if u == nil {
+				slog.Info("found peer but not interested in torrent",
+					slog.String("magnet", found.Magnet))
+				continue
+			}
+			slog.Info("add peer", slog.Any("ip", found.Peer.Addr.String()),
+				slog.Any("foundMagnet", (found.Magnet)),
+				slog.Any("torrentMagnet", u.InfoHash().HexString()))
+			u.AddPeers([]torrent.PeerInfo{found.Peer})
+		}
+	}()
 
 	//wait for SIGINT
 	sigint_channel := make(chan os.Signal, 1)

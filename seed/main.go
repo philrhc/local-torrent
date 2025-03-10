@@ -14,21 +14,7 @@ import (
 	"github.com/anacrolix/torrent/storage"
 )
 
-func newClientConfig() *torrent.ClientConfig {
-	cfg := torrent.NewDefaultClientConfig()
-	cfg.ListenPort = 0
-	cfg.NoDHT = true
-	cfg.DisablePEX = true
-	cfg.NoDefaultPortForwarding = true
-	cfg.Seed = true
-	cfg.Debug = false
-	cfg.AcceptPeerConnections = true
-	cfg.AlwaysWantConns = true
-	cfg.DisableTrackers = true
-	return cfg
-}
-
-var filename = flag.String("filename", "", "file to serve")
+var filename = flag.String("filename", "helloworld.txt", "file to serve")
 
 func main() {
 	flag.Parse()
@@ -36,7 +22,7 @@ func main() {
 	sourceDir := filepath.Join(".")
 	mi := createTorrent(*filename)
 
-	clientConfig := newClientConfig()
+	clientConfig := common.NewClientConfig()
 	clientConfig.DefaultStorage = storage.NewMMap(sourceDir)
 	c, err := torrent.NewClient(clientConfig)
 	common.AssertNil(err)

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"bsc.es/colmena/local-torrent/common"
@@ -15,10 +16,16 @@ import (
 	"github.com/anacrolix/torrent/storage"
 )
 
-var interfc = flag.String("interface", "", "network interface for peer discovery")
+var interfc = flag.String("interface", "", "interface used by Zyre")
 var magnet = flag.String("magnet", "", "magnet link for download")
 var thenseed = flag.Bool("thenseed", false, "seed torrent after downloading")
 var debug = flag.Bool("debug", false, "debug logging")
+
+func parsePort(c *torrent.Client) string {
+	listenAddrs := c.ListenAddrs()
+	first := listenAddrs[0].String()
+	return strings.Split(first, ":")[1]
+}
 
 func main() {
 	slog.Info("started")
@@ -30,12 +37,36 @@ func main() {
 	sourceDir := filepath.Join(tmpDir, "source")
 	clientConfig := common.NewClientConfig()
 	clientConfig.DefaultStorage = storage.NewMMap(sourceDir)
-	clientConfig.LocalServiceDiscovery = torrent.LocalServiceDiscoveryConfig{Enabled: true, Ifi: *interfc}
 	c, _ := torrent.NewClient(clientConfig)
 	defer c.Close()
 
 	slog.Info("starting magnet download", slog.String("magnetLink", *magnet))
 	t, _ := c.AddMagnet(*magnet)
+
+	//indicate interest in a magnet
+	torrents := make(chan string)
+	peerFound := make(chan common.FoundPeer)
+	common.FindPeers(parsePort(c), *interfc, peerFound, torrents)
+	magnetToTorrent := make(map [string]*torrent.Torrent)
+
+	magnetToTorrent[common.ParseMagnetLink(*magnet)] = t
+	torrents <- common.ParseMagnetLink(*magnet)
+	
+	go func () {
+		for {
+			found := <- peerFound
+			u := magnetToTorrent[found.Magnet]
+			if u == nil {
+				slog.Info("found peer but not interested in torrent", 
+					slog.String("magnet", found.Magnet))
+					continue
+			}
+			slog.Info("add peer", slog.Any("ip", found.Peer.Addr.String()), 
+				slog.Any("foundMagnet", (found.Magnet)), 
+				slog.Any("torrentMagnet", u.InfoHash().HexString()))
+			u.AddPeers([]torrent.PeerInfo{found.Peer})
+		}
+	}()
 
 	if *debug {
 		go func ()  {
