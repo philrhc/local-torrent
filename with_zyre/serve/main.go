@@ -18,20 +18,6 @@ import (
 	"github.com/anacrolix/torrent/storage"
 )
 
-func newClientConfig() *torrent.ClientConfig {
-	cfg := torrent.NewDefaultClientConfig()
-	cfg.ListenPort = 0
-	cfg.NoDHT = true
-	cfg.DisablePEX = true
-	cfg.NoDefaultPortForwarding = true
-	cfg.Seed = true
-	cfg.Debug = false
-	cfg.AcceptPeerConnections = true
-	cfg.AlwaysWantConns = true
-	cfg.DisableTrackers = true
-	return cfg
-}
-
 func parsePort(c *torrent.Client) string {
 	listenAddrs := c.ListenAddrs()
 	first := listenAddrs[0].String()
@@ -50,7 +36,7 @@ func main() {
 	sourceDir := filepath.Join(tmpDir, "source")
 	mi := createTorrent(sourceDir, *fileSize)
 
-	clientConfig := newClientConfig()
+	clientConfig := common.NewClientConfig()
 	clientConfig.DefaultStorage = storage.NewMMap(sourceDir)
 	c, err := torrent.NewClient(clientConfig)
 	slog.Info("created bt client", slog.Any("listenAddr", c.ListenAddrs()))
@@ -67,22 +53,22 @@ func main() {
 	torrents := make(chan string)
 	peerFound := make(chan common.FoundPeer)
 	common.FindPeers(parsePort(c), *interfc, peerFound, torrents)
-	magnetToTorrent := make(map [string]*torrent.Torrent)
+	magnetToTorrent := make(map[string]*torrent.Torrent)
 
 	magnetToTorrent[common.ParseMagnetLink(magnet.String())] = t
 	torrents <- common.ParseMagnetLink(magnet.String())
 
-	go func () {
+	go func() {
 		for {
-			found := <- peerFound
+			found := <-peerFound
 			u := magnetToTorrent[found.Magnet]
 			if u == nil {
-				slog.Info("found peer but not interested in torrent", 
+				slog.Info("found peer but not interested in torrent",
 					slog.String("magnet", found.Magnet))
-					continue
+				continue
 			}
-			slog.Info("add peer", slog.Any("ip", found.Peer.Addr.String()), 
-				slog.Any("foundMagnet", (found.Magnet)), 
+			slog.Info("add peer", slog.Any("ip", found.Peer.Addr.String()),
+				slog.Any("foundMagnet", (found.Magnet)),
 				slog.Any("torrentMagnet", u.InfoHash().HexString()))
 			u.AddPeers([]torrent.PeerInfo{found.Peer})
 		}

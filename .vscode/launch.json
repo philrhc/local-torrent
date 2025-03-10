@@ -5,16 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch file",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${file}"
+        },
+        {
             "name": "Leech",
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "leech",
+            "program": "${workspaceFolder}/bep14/leech",
             "args": [
-                "-interface",
-                "lo",
                 "-magnet",
-                "magnet:?xt=urn:btih:4d50e7878c0aea2b426812f1b1fe2b9f28cb950d&dn=file"
+                "magnet:?xt=urn:btih:b111cce8fb56e32bbd54883e443f26ad41399b4b&dn=helloworld.txt",
+                "-debug",
             ]
         },
         {
@@ -22,7 +28,8 @@
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "serve",
+            "program": "${workspaceFolder}/bep14/serve",
         },
+
     ]
 }

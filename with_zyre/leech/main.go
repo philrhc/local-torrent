@@ -16,18 +16,6 @@ import (
 	"github.com/anacrolix/torrent/storage"
 )
 
-func newClientConfig() *torrent.ClientConfig {
-	cfg := torrent.NewDefaultClientConfig()
-	cfg.ListenPort = 0
-	cfg.NoDHT = true
-	cfg.DisablePEX = true
-	cfg.NoDefaultPortForwarding = true
-	cfg.Seed = true
-	cfg.Debug = *debug
-	cfg.AlwaysWantConns = true
-	return cfg
-}
-
 var interfc = flag.String("interface", "", "interface used by Zyre")
 var magnet = flag.String("magnet", "", "magnet link for download")
 var thenseed = flag.Bool("thenseed", false, "seed torrent after downloading")
@@ -47,7 +35,7 @@ func main() {
 	defer envpprof.Stop()
 	defer os.RemoveAll(tmpDir)
 	sourceDir := filepath.Join(tmpDir, "source")
-	clientConfig := newClientConfig()
+	clientConfig := common.NewClientConfig()
 	clientConfig.DefaultStorage = storage.NewMMap(sourceDir)
 	c, _ := torrent.NewClient(clientConfig)
 	defer c.Close()
